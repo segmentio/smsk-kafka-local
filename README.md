@@ -58,10 +58,6 @@ There is a need for simple local setup that can mimic/help us evaluate the stage
 - jmxexporter (Build: sscaling/jmx-prometheus-exporter)
 
 ### NOTE: 
-- apache-kafka reference can be used to incoporate more services as needed
-
-
-### NOTE: 
 - apache-kafka reference can be used to incoporate more features as needed
 - Segement-kafka does not work with cruise-control because of older version (More testing is needed)
 
