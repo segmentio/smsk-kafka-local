@@ -1,0 +1,381 @@
+version: '3'
+services:
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    restart: always
+    hostname: zookeeper
+    container_name: zookeeper
+    volumes:
+      - ./data/zookeeper/:/bitnami/zookeeper
+    ports:
+      - 12181:2181
+    environment:
+      ALLOW_ANONYMOUS_LOGIN: yes
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 512M
+  kafka-1:
+    # https://github.com/bitnami/bitnami-docker-kafka#configuration
+    image: bitnami/kafka:2.6.0
+    restart: always
+    hostname: kafka-1
+    container_name: kafka-1
+    depends_on:
+      - zookeeper
+    volumes:
+      - ./data/kafka/kafka-1:/bitnami/kafka
+      - ./conf/cruise-control/cruise-control-metrics-reporter-2.5.42-SNAPSHOT.jar:/opt/bitnami/kafka/libs/cruise-control-metrics-reporter-2.5.42-SNAPSHOT.jar
+      # - ./conf/kafka/jaas.conf:/opt/bitnami/kafka/config/kafka_jaas.conf
+    ports:
+      - 19092:19092
+      - 18999:8999
+    environment:
+      KAFKA_CFG_BROKER_ID: 1
+      KAFKA_CFG_BROKER_RACK: 'rack1'
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: true
+      KAFKA_CFG_SOCKET_REQUEST_MAX_BYTES: 104857600
+      KAFKA_CFG_AUTO_LEADER_REBALANCE_ENABLE: true
+      KAFKA_CFG_LEADER_IMBALANCE_CHECK_INTERVAL_SECONDS: 60
+      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181/
+      JMX_PORT: 8999
+      KAFKA_JMX_OPTS: "-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false"
+
+      KAFKA_CFG_METRIC_REPORTERS: com.linkedin.kafka.cruisecontrol.metricsreporter.CruiseControlMetricsReporter
+      
+      # https://github.com/bitnami/bitnami-docker-kafka/blob/master/README.md
+      ALLOW_PLAINTEXT_LISTENER: yes
+      # LISTENERS are what interfaces Kafka binds to
+      KAFKA_CFG_LISTENERS: CLIENT://:9092,EXTERNAL://:19092
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CLIENT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      # ADVERTISED_LISTENERS are how clients can connect
+      KAFKA_CFG_ADVERTISED_LISTENERS: CLIENT://kafka-1:9092,EXTERNAL://localhost:19092
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: CLIENT
+      
+      KAFKA_CFG_MIN_INSYNC_REPLICAS: 2
+      KAFKA_CFG_DEFAULT_REPLICATION_FACTOR: 3
+      KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      
+      # can be used along with jaas
+      #KAFKA_CFG_LISTENERS: 'PLAINTEXT://:9092,SASL_PLAINTEXT://:19092'
+      #KAFKA_CFG_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka-1:9092,SASL_PLAINTEXT://localhost:19092'
+      #KAFKA_CFG_SASL_ENABLED_MECHANISMS: 'PLAIN'
+      #KAFKA_OPTS: "-Djava.security.auth.login.config=/opt/bitnami/kafka/config/kafka_jaas.conf"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 512M
+  kafka-2:
+    image: bitnami/kafka:2.6.0
+    restart: always
+    hostname: kafka-2
+    container_name: kafka-2
+    volumes:
+      - ./data/kafka/kafka-2:/bitnami/kafka
+      - ./conf/cruise-control/cruise-control-metrics-reporter-2.5.42-SNAPSHOT.jar:/opt/bitnami/kafka/libs/cruise-control-metrics-reporter-2.5.42-SNAPSHOT.jar
+    ports:
+      - 29092:29092
+      - 28999:8999
+    environment:
+      KAFKA_CFG_BROKER_ID: 2
+      KAFKA_CFG_BROKER_RACK: 'rack2'
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: true
+      KAFKA_CFG_SOCKET_REQUEST_MAX_BYTES: 104857600
+      KAFKA_CFG_AUTO_LEADER_REBALANCE_ENABLE: true
+      KAFKA_CFG_LEADER_IMBALANCE_CHECK_INTERVAL_SECONDS: 60
+      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181/
+      JMX_PORT: 8999
+      KAFKA_JMX_OPTS: "-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false"
+
+      KAFKA_CFG_METRIC_REPORTERS: com.linkedin.kafka.cruisecontrol.metricsreporter.CruiseControlMetricsReporter
+      
+      # https://github.com/bitnami/bitnami-docker-kafka/blob/master/README.md
+      ALLOW_PLAINTEXT_LISTENER: yes
+      # LISTENERS are what interfaces Kafka binds to
+      KAFKA_CFG_LISTENERS: CLIENT://:9092,EXTERNAL://:29092
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CLIENT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      # ADVERTISED_LISTENERS are how clients can connect
+      KAFKA_CFG_ADVERTISED_LISTENERS: CLIENT://kafka-2:9092,EXTERNAL://localhost:29092
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: CLIENT
+      
+      KAFKA_CFG_MIN_INSYNC_REPLICAS: 2
+      KAFKA_CFG_DEFAULT_REPLICATION_FACTOR: 3
+      KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 512M
+  kafka-3:
+    image: bitnami/kafka:2.6.0
+    restart: always
+    hostname: kafka-3
+    container_name: kafka-3
+    volumes:
+      - ./data/kafka/kafka-3:/bitnami/kafka
+      - ./conf/cruise-control/cruise-control-metrics-reporter-2.5.42-SNAPSHOT.jar:/opt/bitnami/kafka/libs/cruise-control-metrics-reporter-2.5.42-SNAPSHOT.jar
+    ports:
+      - 39092:39092
+      - 38999:8999
+    environment:
+      KAFKA_CFG_BROKER_ID: 3
+      KAFKA_CFG_BROKER_RACK: 'rack3'
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: true
+      KAFKA_CFG_SOCKET_REQUEST_MAX_BYTES: 104857600
+      KAFKA_CFG_AUTO_LEADER_REBALANCE_ENABLE: true
+      KAFKA_CFG_LEADER_IMBALANCE_CHECK_INTERVAL_SECONDS: 60
+      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181/
+      JMX_PORT: 8999
+      KAFKA_JMX_OPTS: "-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false"
+
+      KAFKA_CFG_METRIC_REPORTERS: com.linkedin.kafka.cruisecontrol.metricsreporter.CruiseControlMetricsReporter
+      
+      # https://github.com/bitnami/bitnami-docker-kafka/blob/master/README.md
+      ALLOW_PLAINTEXT_LISTENER: yes
+      # LISTENERS are what interfaces Kafka binds to
+      KAFKA_CFG_LISTENERS: CLIENT://:9092,EXTERNAL://:39092
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CLIENT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      # ADVERTISED_LISTENERS are how clients can connect
+      KAFKA_CFG_ADVERTISED_LISTENERS: CLIENT://kafka-3:9092,EXTERNAL://localhost:39092
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: CLIENT
+
+      KAFKA_CFG_MIN_INSYNC_REPLICAS: 2
+      KAFKA_CFG_DEFAULT_REPLICATION_FACTOR: 3
+      KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 512M
+  kafka-4:
+    image: bitnami/kafka:2.6.0
+    restart: always
+    hostname: kafka-4
+    container_name: kafka-4
+    volumes:
+      - ./data/kafka/kafka-4:/bitnami/kafka
+      # - ./conf/cruise-control/cruise-control-metrics-reporter-2.5.103-SNAPSHOT.jar:/opt/bitnami/kafka/libs/cruise-control-metrics-reporter-2.5.103-SNAPSHOT.jar
+      - ./conf/cruise-control/cruise-control-metrics-reporter-2.5.42-SNAPSHOT.jar:/opt/bitnami/kafka/libs/cruise-control-metrics-reporter-2.5.42-SNAPSHOT.jar
+    ports:
+      - 49092:49092
+      - 48999:8999
+    environment:
+      KAFKA_CFG_BROKER_ID: 4
+      KAFKA_CFG_BROKER_RACK: 'rack3'
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: true
+      KAFKA_CFG_SOCKET_REQUEST_MAX_BYTES: 104857600
+      KAFKA_CFG_AUTO_LEADER_REBALANCE_ENABLE: true
+      KAFKA_CFG_LEADER_IMBALANCE_CHECK_INTERVAL_SECONDS: 60
+      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181/
+      JMX_PORT: 8999
+      KAFKA_JMX_OPTS: "-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false"
+
+      KAFKA_CFG_METRIC_REPORTERS: com.linkedin.kafka.cruisecontrol.metricsreporter.CruiseControlMetricsReporter
+      
+      # https://github.com/bitnami/bitnami-docker-kafka/blob/master/README.md
+      ALLOW_PLAINTEXT_LISTENER: yes
+      # LISTENERS are what interfaces Kafka binds to
+      KAFKA_CFG_LISTENERS: CLIENT://:9092,EXTERNAL://:49092
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CLIENT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      # ADVERTISED_LISTENERS are how clients can connect
+      KAFKA_CFG_ADVERTISED_LISTENERS: CLIENT://kafka-4:9092,EXTERNAL://localhost:49092
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: CLIENT
+
+      KAFKA_CFG_MIN_INSYNC_REPLICAS: 2
+      KAFKA_CFG_DEFAULT_REPLICATION_FACTOR: 3
+      KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 512M
+  cmak:
+    image: ghcr.io/eshepelyuk/dckr/cmak-3.0.0.6:latest
+    container_name: cmak
+    depends_on:
+      - zookeeper
+    restart: always
+    # command: "/cmak/bin/cmak -Dpidfile.path=/dev/null -Dapplication.home=/cmak -Djava.security.auth.login.config=/opt/kafka_jaas.conf"
+    ports:
+      - "19000:9000"
+    environment:
+      ZK_HOSTS: "zookeeper:2181"
+    #volumes:
+    #  - ./conf/kafka/jaas.conf:/opt/kafka_jaas.conf
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+  ## Comment below if local machine is overwhelmed (sublime: cmd + /)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - 19090:9090
+    volumes:
+      - ./conf/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml
+      - ./conf/prometheus/alerts.yaml:/etc/prometheus/alerts.yml
+    deploy:
+      resources:
+        limits:
+          cpus: '0.10'
+          memory: 128M
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: always
+    environment: 
+      GF_SECURITY_DISABLE_INITIAL_ADMIN_CREATION: "true"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Admin"
+      GF_AUTH_DISABLE_SIGNOUT_MENU: "true"
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+    ports:
+      - 13000:3000
+    volumes:
+      - ./conf/grafana/provisioning:/etc/grafana/provisioning
+    deploy:
+      resources:
+        limits:
+          cpus: '0.10'
+          memory: 128M
+  kafka_exporter:
+    image: danielqsj/kafka-exporter:latest
+    container_name: kafka_exporter
+    restart: always
+    depends_on:
+      - "kafka-1"
+      - "kafka-2"
+      - "kafka-3"
+      - "kafka-4"
+    ports:
+      - "19308:9308"
+    command: "--kafka.server=kafka-1:9092 --kafka.server=kafka-2:9092 --kafka.server=kafka-3:9092 --kafka.server=kafka-4:9092"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.10'
+          memory: 128M
+  lagexporter-1:
+    image: seglo/kafka-lag-exporter:latest
+    container_name: lag_exporter
+    restart: always
+    ports:
+      - 18000:8000
+    volumes:
+      - ./conf/lagexporter/application.conf:/opt/docker/conf/application.conf
+    deploy:
+      resources:
+        limits:
+          cpus: '0.10'
+          memory: 128M
+  jmxexporter:
+    image: sscaling/jmx-prometheus-exporter
+    container_name: jmx_exporter
+    depends_on:
+      - "kafka-1"
+    ports:
+      - "15556:5556"
+    environment:
+      SERVICE_PORT: 5556
+    volumes:
+      - ./conf/jmxexporter/jmxexporter.yaml:/opt/jmx_exporter/config.yml
+    deploy:
+      resources:
+        limits:
+          cpus: '0.10'
+          memory: 128M
+  cruise-control:
+    image: 528451384384.dkr.ecr.us-west-2.amazonaws.com/cruise-control:v2.5.42
+    hostname: cruise-control
+    container_name: cruise-control
+    restart: always
+    ports:
+      - "19091:9090"
+    volumes:
+      - ./conf/cruise-control/cruisecontrol.properties:/usr/local/cruise-control/config/cruisecontrol.properties
+      - ./conf/cruise-control/capacityCores.json:/usr/local/cruise-control/config/capacityCores.json
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+  cruise-control-ui:
+    image: 528451384384.dkr.ecr.us-west-2.amazonaws.com/cruise-control-ui:v0.4.0
+    hostname: cruise-control-ui
+    container_name: cruise-control-ui
+    restart: always
+    ports:
+      - "9090:80"
+    volumes:
+      - ./conf/cruise-control-ui/config.csv:/usr/share/nginx/html/static/config.csv
+      - ./conf/cruise-control-ui/nginx-default.conf:/etc/nginx/conf.d/default.conf
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+  producer-1:
+    image: 528451384384.dkr.ecr.us-west-2.amazonaws.com/smsk-kafka-load:v2.5.1
+    hostname: producer-1
+    container_name: producer-1
+    restart: always
+    command: 
+      - "/srv/kafka/bin/kafka-producer-perf-test.sh"
+      - "--topic"
+      - "test-1"
+      - "--num-records"
+      - "1000000"
+      - "--throughput"
+      - "10"
+      - "--producer-props"
+      - "bootstrap.servers=kafka-1:9092,kafka-2:9092,kafka-3:9092,kafka-4:9092"
+      - "--record-size"
+      - "50"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+  consumer-1:
+    image: 528451384384.dkr.ecr.us-west-2.amazonaws.com/smsk-kafka-load:v2.5.1
+    hostname: consumer-1
+    container_name: consumer-1
+    restart: always
+    command: 
+      - "/srv/kafka/bin/kafka-console-consumer.sh"
+      - "--topic"
+      - "test-1"
+      - "--group"
+      - "test-consumer-1"
+      - "--bootstrap-server=kafka-1:9092,kafka-2:9092,kafka-3:9092,kafka-4:9092"
+      - "--from-beginning"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+  smsk-bulrush-test:
+    image: 528451384384.dkr.ecr.us-west-2.amazonaws.com/smsk-bulrush-test:6691b7d
+    restart: always
+    hostname: smsk-bulrush-test
+    container_name: smsk-bulrush-test
+    command:
+      - "/bin/worker"
+      - "-debug=false"
+      - "-source.connect=kafka-1"
+      - "-source.group-id=bulrush-test-cg-1"
+      - "-source.topic=test-1"
+      - "-sink.connect=kafka-1"
+      - "-output-topic=test-2"
+      - "-address=:3000"
+    ports:
+      - 3000:3000
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M

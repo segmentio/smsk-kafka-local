@@ -1,0 +1,123 @@
+version: '3'
+services:
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    restart: always
+    hostname: zookeeper
+    container_name: zookeeper
+    volumes:
+      - ./data/zookeeper/:/bitnami/zookeeper
+    ports:
+      - 12181:2181
+    environment:
+      ALLOW_ANONYMOUS_LOGIN: yes
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 512M
+  kafka-0:
+    image: 528451384384.dkr.ecr.us-west-2.amazonaws.com/kafka:0.10.1.1-0.18
+    restart: always
+    hostname: kafka-0
+    container_name: kafka-0
+    depends_on:
+      - zookeeper
+    ports:
+      - 19092:19092
+      - 18999:8999
+    volumes:
+      - ./conf/kafka/0:/srv/kafka/config/server.properties
+      - ./conf/cruise-control/cruise-control-metrics-reporter-0.1.0-SNAPSHOT.jar:/srv/kafka/libs/cruise-control-metrics-reporter-0.1.0-SNAPSHOT.jar
+      - ./conf/kafka/start.sh:/start.sh
+    command: "/start.sh kafka-local-internal zookeeper:2181/"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 512M
+  kafka-1:
+    image: 528451384384.dkr.ecr.us-west-2.amazonaws.com/kafka:0.10.1.1-0.18
+    restart: always
+    hostname: kafka-1
+    container_name: kafka-1
+    depends_on:
+      - zookeeper
+    ports:
+      - 29092:29092
+      - 28999:8999
+    volumes:
+      - ./conf/kafka/1:/srv/kafka/config/server.properties
+      - ./conf/cruise-control/cruise-control-metrics-reporter-0.1.0-SNAPSHOT.jar:/srv/kafka/libs/cruise-control-metrics-reporter-0.1.0-SNAPSHOT.jar
+      - ./conf/kafka/start.sh:/start.sh
+    command: "/start.sh kafka-local-internal zookeeper:2181/"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 512M
+  kafka-2:
+    image: 528451384384.dkr.ecr.us-west-2.amazonaws.com/kafka:0.10.1.1-0.18
+    restart: always
+    hostname: kafka-2
+    container_name: kafka-2
+    depends_on:
+      - zookeeper
+    ports:
+      - 39092:39092
+      - 38999:8999
+    volumes:
+      - ./conf/kafka/2:/srv/kafka/config/server.properties
+      - ./conf/cruise-control/cruise-control-metrics-reporter-0.1.0-SNAPSHOT.jar:/srv/kafka/libs/cruise-control-metrics-reporter-0.1.0-SNAPSHOT.jar
+      - ./conf/kafka/start.sh:/start.sh
+    command: "/start.sh kafka-local-internal zookeeper:2181/"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 512M
+  cruise-control:
+    image: 528451384384.dkr.ecr.us-west-2.amazonaws.com/cruise-control:v2.5.42
+    hostname: cruise-control
+    container_name: cruise-control
+    restart: always
+    ports:
+      - "19091:9090"
+    volumes:
+      - ./conf/cruise-control/cruisecontrol.properties:/usr/local/cruise-control/config/cruisecontrol.properties
+      - ./conf/cruise-control/capacityCores.json:/usr/local/cruise-control/config/capacityCores.json
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+  cruise-control-ui:
+    image: 528451384384.dkr.ecr.us-west-2.amazonaws.com/cruise-control-ui:v0.4.0
+    hostname: cruise-control-ui
+    container_name: cruise-control-ui
+    restart: always
+    ports:
+      - "9090:80"
+    volumes:
+      - ./conf/cruise-control-ui/config.csv:/usr/share/nginx/html/static/config.csv
+      - ./conf/cruise-control-ui/nginx-default.conf:/etc/nginx/conf.d/default.conf
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+  cmak:
+    image: ghcr.io/eshepelyuk/dckr/cmak-3.0.0.6:latest
+    container_name: cmak
+    depends_on:
+      - zookeeper
+    restart: always
+    ports:
+      - "19000:9000"
+    environment:
+      ZK_HOSTS: "zookeeper:2181"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M

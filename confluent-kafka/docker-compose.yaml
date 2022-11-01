@@ -1,0 +1,204 @@
+version: '3'
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    hostname: zookeeper
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - 12181:2181
+    volumes:
+      - ./data/zookeeper/zk:/var/lib/zookeeper/data
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 256M
+  kafka-1:
+    image: confluentinc/cp-kafka:latest
+    hostname: kafka
+    container_name: kafka-1
+    restart: always
+    depends_on:
+      - zookeeper
+    volumes:
+      - ./data/kafka/broker-1:/var/lib/kafka/data
+    ports:
+      - 19092:19092
+      - 18090:8090
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_BROKER_RACK: 'dc_1'
+      KAFKA_SOCKET_REQUEST_MAX_BYTES: 104857600
+      KAFKA_AUTO_LEADER_REBALANCE_ENABLE: true
+      KAFKA_LEADER_IMBALANCE_CHECK_INTERVAL_SECONDS: 60
+      KAFKA_CONFLUENT_BALANCER_ENABLE: true
+      KAFKA_CONFLUENT_CONTROLCENTER_STREAMS_CPREST_URL: "PLAINTEXT://kafka-1:8090"
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 2
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_JMX_PORT: 49999
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-1:9092,PLAINTEXT_HOST://localhost:19092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+  kafka-2:
+    image: confluentinc/cp-kafka:latest
+    hostname: kafka
+    container_name: kafka-2
+    restart: always
+    depends_on:
+      - zookeeper
+    volumes:
+      - ./data/kafka/broker-2:/var/lib/kafka/data
+    ports:
+      - 29092:29092
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_BROKER_RACK: 'dc_2'
+      KAFKA_SOCKET_REQUEST_MAX_BYTES: 104857600
+      KAFKA_AUTO_LEADER_REBALANCE_ENABLE: true
+      KAFKA_LEADER_IMBALANCE_CHECK_INTERVAL_SECONDS: 60
+      KAFKA_CONFLUENT_BALANCER_ENABLE: true
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 2
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_JMX_PORT: 49999
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-2:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+  kafka-3:
+    image: confluentinc/cp-kafka:latest
+    hostname: kafka
+    container_name: kafka-3
+    restart: always
+    depends_on:
+      - zookeeper
+    volumes:
+      - ./data/kafka/broker-3:/var/lib/kafka/data
+    ports:
+      - 39092:39092
+    environment:
+      KAFKA_BROKER_ID: 3
+      KAFKA_BROKER_RACK: 'dc_3'
+      KAFKA_SOCKET_REQUEST_MAX_BYTES: 104857600
+      KAFKA_AUTO_LEADER_REBALANCE_ENABLE: true
+      KAFKA_LEADER_IMBALANCE_CHECK_INTERVAL_SECONDS: 60
+      KAFKA_CONFLUENT_BALANCER_ENABLE: true
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 2
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_JMX_PORT: 49999
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-3:9092,PLAINTEXT_HOST://localhost:39092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+  lagexporter-1:
+    image: seglo/kafka-lag-exporter:latest
+    container_name: lag_exporter
+    ports:
+      - 18000:8000
+    volumes:
+      - ./conf/lagexporter/application.conf:/opt/docker/conf/application.conf
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+  jmxexporter:
+    image: sscaling/jmx-prometheus-exporter
+    container_name: jmx_exporter
+    depends_on:
+      - "kafka-1"
+    ports:
+      - "15556:5556"
+    environment:
+      SERVICE_PORT: 5556
+    volumes:
+      - ./conf/jmxexporter/jmxexporter.yaml:/opt/jmx_exporter/config.yml
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+  cmak:
+    image: ghcr.io/eshepelyuk/dckr/cmak-3.0.0.6:latest
+    container_name: cmak
+    depends_on:
+      - zookeeper
+    restart: always
+    ports:
+      - "19000:9000"
+    environment:
+      ZK_HOSTS: "zookeeper:2181"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 512M
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - 19090:9090
+    volumes:
+      - ./conf/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml
+      - ./conf/prometheus/alerts.yaml:/etc/prometheus/alerts.yml
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: always
+    environment: 
+      GF_SECURITY_DISABLE_INITIAL_ADMIN_CREATION: "true"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Admin"
+      GF_AUTH_DISABLE_SIGNOUT_MENU: "true"
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+    ports:
+      - 13000:3000
+    volumes:
+      - ./conf/grafana/provisioning:/etc/grafana/provisioning
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+  kafka_exporter:
+    image: danielqsj/kafka-exporter:latest
+    container_name: kafka_exporter
+    restart: always
+    depends_on:
+      - "kafka-1"
+      - "kafka-2"
+      - "kafka-3"
+    ports:
+      - "19308:9308"
+    command: "--kafka.server=kafka-1:9092 --kafka.server=kafka-2:9092 --kafka.server=kafka-3:9092"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M

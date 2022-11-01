@@ -1,0 +1,12 @@
+groups:
+- name: common
+  rules:
+  # Alert for any instance that is unreachable by Prometheus for more than a minute.
+  - alert: InstanceDown
+    expr: up == 0
+    for: 1m
+    labels:
+      severity: page
+    annotations:
+      summary: "Instance '{{ $labels.instance }}' ('{{ $labels.job }}') down"
+      description: "'{{ $labels.instance }}' of job '{{ $labels.job }}' has been down for more than a minute."
